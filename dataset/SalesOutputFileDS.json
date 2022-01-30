@@ -1,0 +1,19 @@
+{
+	"name": "SalesOutputFileDS",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "InputLS",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"folderPath": "OutputCopy",
+				"container": "blobinput"
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

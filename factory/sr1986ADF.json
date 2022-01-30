@@ -1,0 +1,9 @@
+{
+	"name": "sr1986ADF",
+	"location": "centralindia",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "ea91c65f-7371-46bd-a135-b87631b5b7ae",
+		"tenantId": "604c1504-c6a3-4080-81aa-b33091104187"
+	}
+}
