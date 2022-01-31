@@ -1,0 +1,64 @@
+{
+	"name": "SCD2dataflow",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "EmpDataset",
+						"type": "DatasetReference"
+					},
+					"name": "EmpSource"
+				},
+				{
+					"dataset": {
+						"referenceName": "emp2tableDS",
+						"type": "DatasetReference"
+					},
+					"name": "Emp2SqlTable"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "emp2tableDS",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				},
+				{
+					"dataset": {
+						"referenceName": "emp2tableDS",
+						"type": "DatasetReference"
+					},
+					"name": "sink2"
+				}
+			],
+			"transformations": [
+				{
+					"name": "AddingIsActive"
+				},
+				{
+					"name": "Select1"
+				},
+				{
+					"name": "Lookup1"
+				},
+				{
+					"name": "ExistingRows"
+				},
+				{
+					"name": "Select2"
+				},
+				{
+					"name": "updateIsActive"
+				},
+				{
+					"name": "AlterRow1"
+				}
+			],
+			"script": "source(output(\n\t\tempid as integer,\n\t\tname as string,\n\t\tcountry as string,\n\t\tdepartmentid as integer\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tignoreNoFilesFound: false) ~> EmpSource\nsource(output(\n\t\tsurrkey as integer,\n\t\tempid as integer,\n\t\tname as string,\n\t\tcountry as string,\n\t\tdepartment as integer,\n\t\tisActive as integer\n\t),\n\tallowSchemaDrift: true,\n\tvalidateSchema: false,\n\tisolationLevel: 'READ_UNCOMMITTED',\n\tformat: 'table') ~> Emp2SqlTable\nEmpSource derive(IsActive = 1) ~> AddingIsActive\nEmp2SqlTable select(mapColumn(\n\t\tSql_surrkey = surrkey,\n\t\tSql_empid = empid,\n\t\tSql_name = name,\n\t\tSql_country = country,\n\t\tSql_department = department,\n\t\tSql_isActive = isActive\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select1\nEmpSource, Select1 lookup(empid == Sql_empid,\n\tmultiple: false,\n\tpickup: 'any',\n\tbroadcast: 'auto')~> Lookup1\nLookup1 filter(!isNull(Sql_empid)) ~> ExistingRows\nExistingRows select(mapColumn(\n\t\tSql_surrkey,\n\t\tSql_empid,\n\t\tSql_name,\n\t\tSql_country,\n\t\tSql_department,\n\t\tSql_isActive\n\t),\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true) ~> Select2\nSelect2 derive(Sql_isActive = 0) ~> updateIsActive\nupdateIsActive alterRow(updateIf(1==1)) ~> AlterRow1\nAddingIsActive sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\tsurrkey as integer,\n\t\tempid as integer,\n\t\tname as string,\n\t\tcountry as string,\n\t\tdepartment as integer,\n\t\tisActive as integer\n\t),\n\tdeletable:false,\n\tinsertable:true,\n\tupdateable:false,\n\tupsertable:false,\n\tformat: 'table',\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tsaveOrder: 2,\n\terrorHandlingOption: 'stopOnFirstError',\n\tmapColumn(\n\t\tempid,\n\t\tname,\n\t\tcountry,\n\t\tdepartment = departmentid,\n\t\tisActive = IsActive\n\t)) ~> sink1\nAlterRow1 sink(allowSchemaDrift: true,\n\tvalidateSchema: false,\n\tinput(\n\t\tsurrkey as integer,\n\t\tempid as integer,\n\t\tname as string,\n\t\tcountry as string,\n\t\tdepartment as integer,\n\t\tisActive as integer\n\t),\n\tdeletable:false,\n\tinsertable:false,\n\tupdateable:true,\n\tupsertable:false,\n\tkeys:['surrkey'],\n\tformat: 'table',\n\tskipDuplicateMapInputs: true,\n\tskipDuplicateMapOutputs: true,\n\tsaveOrder: 1,\n\terrorHandlingOption: 'stopOnFirstError',\n\tmapColumn(\n\t\tsurrkey = Sql_surrkey,\n\t\tempid = Sql_empid,\n\t\tname = Sql_name,\n\t\tcountry = Sql_country,\n\t\tdepartment = Sql_department,\n\t\tisActive = Sql_isActive\n\t)) ~> sink2"
+		}
+	}
+}
